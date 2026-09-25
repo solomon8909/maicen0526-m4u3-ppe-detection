@@ -13,9 +13,19 @@ HOW TO COMPLETE (delete this block before submitting)
 4. Rewrite the three improvements so each one points at a failure you actually saw.
 -->
 
-**Prepared by:** Vijay Arun Dongre (Group 7) · **Model:** YOLOv8n, 30 epochs · **Evaluated on:** validation split (⟪FILL: n⟫ images) · **Thresholds:** confidence 0.25, IoU 0.50 · **Totals:** ⟪FILL⟫ false positives, ⟪FILL⟫ false negatives
+**Prepared by:** Vijay Arun Dongre (Group 7) · **Model:** YOLOv8n, 30 epochs · **Evaluated on:** validation split (143 images) · **Thresholds:** confidence 0.25, IoU 0.50 · **Totals:** 128 false positives, 216 false negatives
 
-⟪FILL: paste the per-class table from `results/metrics/error_counts.md`⟫
+| class | false positives | false negatives |
+|---|---|---|
+| Hardhat | 5 | 60 |
+| NO-Hardhat | 21 | 40 |
+| NO-Safety Vest | 40 | 72 |
+| Person | 45 | 28 |
+| Safety Vest | 17 | 16 |
+
+Two patterns to explain. First, misses outnumber false alarms by 216 to 128, and `Hardhat` is the extreme case: 60 missed against only 5 invented. Second, `Person` is the one class that inverts this, with more false positives (45) than misses (28).
+
+The cases the notebook selected are worth reading with that in mind. The most confident false positives are all `NO-Hardhat` and `NO-Safety Vest` predictions at 0.85–0.95. The largest misses are not small distant workers at all — several occupy 20–60% of the image, including a missed `Person` at 46.2% and a missed `NO-Safety Vest` at 60.5%. A model that misses an object filling half the frame is not failing on object size, so the usual small-object explanation does not fit here. Look at whether those images are crowded scenes, unusual crops, or cases where the dataset's own label is questionable.
 
 A prediction counts as a **false positive** when it has no same-class label overlapping it at IoU ≥ 0.50. A label counts as a **false negative** when no same-class prediction overlaps it at IoU ≥ 0.50. Some "errors" found this way turn out to be missing or wrong labels in the dataset rather than model mistakes. Where that is the case it is said so below, because it changes what the fix is.
 
@@ -48,3 +58,4 @@ The order follows the risk note in the governance checklist: missed violations m
 3. **⟪FILL — e.g. "Audit and correct labels in the ⟪n⟫ validation images where the FP/FN review showed missing labels."⟫** Addresses FP⟪#⟫/FN⟪#⟫. How we will know it worked: re-running evaluation on corrected labels removes those cases without retraining — which also tells us how much of our measured error was the dataset's, not the model's.
 
 A modelling change such as moving to `yolov8s` or training at 960 px would probably help small objects too, but it is deliberately not on this list: the brief asks for data improvements, and without better data a bigger model mostly learns the existing gaps more confidently.
+
