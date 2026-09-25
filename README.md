@@ -52,14 +52,14 @@ Five classes. Full definitions with edge cases are in [`docs/class_definitions.m
 | **Export format** | YOLOv11 (identical label format to YOLOv8; trained with a YOLOv8 model per the brief) |
 | **Licence** | **CC BY 4.0** — same licence as upstream, attribution below |
 
-**Splits and class counts** ⟪FILL: paste `results/metrics/dataset_summary.md`⟫
+**Splits and labelled instances per class**
 
 | split | images | Hardhat | NO-Hardhat | NO-Safety Vest | Person | Safety Vest |
 |---|---|---|---|---|---|---|
-| train | 574 | | | | | |
-| valid | 143 | | | | | |
+| train | 574 | 454 | 315 | 424 | 910 | 375 |
+| valid | 143 | 120 | 87 | 158 | 238 | 49 |
 
-Source project: 717 images, 25 classes. Instance counts per class ⟪FILL from `results/metrics/dataset_summary.md`⟫.
+Source project: 717 images, 25 classes. The classes are unevenly represented: `Person` carries roughly twice the instances of any PPE class, and `Safety Vest` has only 49 instances in validation, so its per-class metrics rest on a thin sample and should be read with that in mind.
 
 **Version settings:** 80 / 20 train / valid (rebalanced at version generation, 0% test) · **preprocessing:** resize (stretch) to 640 × 640 · **augmentation:** none · **classes:** five of the upstream 25 retained; the other 20 (Mask, NO-Mask, Safety Cone, Gloves, Ladder, Excavator, machinery and the vehicle classes) omitted via Modify Classes.
 
@@ -77,9 +77,9 @@ Source project: 717 images, 25 classes. Instance counts per class ⟪FILL from `
 2. `Runtime → Change runtime type → T4 GPU → Save`.
 3. `Runtime → Disconnect and delete runtime`, then `Run all`. Nothing else to configure.
 4. Choose a different `RUN_MODE` in the configuration cell for a shorter run:
-   - `"full"` — trains 30 epochs, evaluates the new weights (~40–75 min on T4)
-   - `"verify"` — 5-epoch verification run, then evaluates our released weights (~10–15 min)
-   - `"load"` — no training; evaluates the released weights (~5 min)
+   - `"full"` — trains 30 epochs, evaluates the new weights (~6 min on T4 for this dataset)
+   - `"verify"` — 5-epoch verification run, then evaluates our released weights (~3–5 min)
+   - `"load"` — no training; evaluates the released weights (~2–3 min)
 
 **Expected outputs, in order:** the dataset download reporting `SHA256 verified: …`, the split and class-count table, training logs, the metrics table (precision, recall, mAP50, mAP50–95, overall and per class), training curves, confusion matrix and PR curve, the evidence images listed below, false-positive and false-negative counts, and the reproducibility record. The last cell downloads everything as `results.zip`.
 
@@ -87,17 +87,30 @@ If Colab gives you no GPU, the notebook switches `full` to `verify` by itself an
 
 ## 5. Results
 
-⟪FILL: paste the metrics table from `results/metrics/metrics_table.md`⟫
+**Validation split · 143 images · confidence 0.25 · IoU 0.50**
 
 | class | precision | recall | mAP50 | mAP50-95 |
 |---|---|---|---|---|
-| all | | | | |
+| all | 0.806 | 0.584 | 0.662 | 0.411 |
+| Hardhat | 0.952 | 0.633 | 0.760 | 0.486 |
+| NO-Hardhat | 0.700 | 0.510 | 0.545 | 0.291 |
+| NO-Safety Vest | 0.767 | 0.499 | 0.573 | 0.338 |
+| Person | 0.832 | 0.626 | 0.716 | 0.485 |
+| Safety Vest | 0.779 | 0.653 | 0.717 | 0.456 |
 
 ![Training curves](results/curves/training_curves_summary.png)
 
 **What the numbers say**
 
-⟪FILL: 2–3 takeaways written after you see the results. Useful angles: which class is weakest and why; whether NO-Hardhat recall met the 0.70 target; whether validation loss flattened or was still falling at epoch 30 (i.e. would more epochs help); how the model did on the unseen images compared with the validation set.⟫
+**One target met, one missed.** Overall mAP50 of 0.662 clears the 0.60 we set. Recall on `NO-Hardhat` is 0.510, well short of the 0.70 we said we needed. We are reporting that as a failure against our own criterion rather than adjusting the criterion after the fact.
+
+**The model is cautious, and it is cautious in the wrong direction for this use.** Precision exceeds recall on every one of the five classes — 0.806 against 0.584 overall. When it flags something it is usually right; `Hardhat` precision reaches 0.952 against just 5 false positives. But across the validation split it produced 216 false negatives against 128 false positives, so it misses far more than it invents. `Hardhat` alone accounts for 60 misses.
+
+**The two classes that carry the safety signal are the weakest.** `NO-Hardhat` and `NO-Safety Vest` come last on every measure (mAP50 0.545 and 0.573, recall 0.510 and 0.499). This is exactly the failure mode the [risk note](docs/governance_checklist.md#4-risk-note--false-negatives-vs-false-positives) anticipated before we had any numbers: a missed violation is the error that matters, and this model's bias runs against its own purpose. Detecting an absence is harder than detecting an object, and the results show the cost of that.
+
+**Two caveats on the per-class figures.** `Safety Vest` scores well (mAP50 0.717) on only 49 validation instances, a thin enough sample that the number should not be leaned on. And the most confident false positives are `NO-Hardhat` predictions at 0.85–0.95 — so where the model does invent violations, it does so with conviction.
+
+**What follows for deployment.** As it stands this is a screening aid at a lowered confidence threshold, not a compliance check. Raising recall on the negative classes is the first priority, and the error analysis sets out which data would do it.
 
 **Evidence** — everything is in [`results/`](results/):
 
@@ -119,14 +132,24 @@ Error analysis: [`docs/error_analysis.md`](docs/error_analysis.md) · Governance
 - [x] **Split:** 80 / 20 train / valid
 - [x] **Model variant:** `yolov8n.pt` (COCO-pretrained starting weights)
 - [x] **Epochs / batch / imgsz:** 30 / 16 / 640 · seed 42 · `deterministic=True`
-- [x] **Ultralytics version:** ⟪FILL: printed by the notebook⟫ · torch ⟪FILL⟫ · Python ⟪FILL⟫
+- [x] **Ultralytics version:** 8.4.163 · torch 2.11.0+cu128 · Python 3.13.15
 - [x] **Weights:** Release `v1.0` → `best.pt`
 - [x] **Confidence / IoU for evidence and error mining:** 0.25 / 0.50
 - [x] **No credentials anywhere** in committed cells, cell outputs or git history
 
 ### Reproducibility proof
 
-⟪FILL: paste the block printed by the last cell of `02_train_eval.ipynb` (also saved as `results/reproducibility_record.md`). It records date/time of the run, GPU, software versions, runtime, dataset checksum and metrics.⟫
+- **Last successful run:** 2026-09-25 20:59 UTC
+- **Run mode:** `full`
+- **Hardware:** Tesla T4
+- **Software:** Python 3.13.15 · torch 2.11.0+cu128 · ultralytics 8.4.163
+- **Dataset:** frozen release asset `ppe-construction-v1-yolo11.zip` · SHA256 `979ebedaa790feb32be28f93d96dc034ac0f71bbdfaeb589746cc61d8b83c926` · train 574 / val 143 images
+- **Data path used:** keyless GitHub Release (no credentials) · annotated and versioned in Roboflow `solomon-yirga/construction-site-safety-cnfob` v1
+- **Model / parameters:** yolov8n.pt · epochs 30 · batch 16 · imgsz 640 · seed 42
+- **Training time:** 5.4 min · **Total notebook runtime:** 5.7 min
+- **Expected runtime:** full ≈ 6–10 min on T4 · verify ≈ 3–5 min · load ≈ 2–3 min
+
+The full record, including the metrics table, is in [`results/reproducibility_record.md`](results/reproducibility_record.md).
 
 ## 7. Repository structure
 
@@ -185,3 +208,4 @@ Generative AI (Anthropic Claude) was used to help structure the repository, draf
   note         = {CC BY 4.0}
 }
 ```
+
