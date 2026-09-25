@@ -1,0 +1,8 @@
+# Installed automatically by the notebooks in Colab. Listed here for reference.
+# After the first successful run, replace ">=" with the exact versions printed by 02_train_eval.ipynb.
+ultralytics>=8.3
+roboflow
+opencv-python-headless
+pyyaml
+pandas
+matplotlib

@@ -1,0 +1,18 @@
+# Runtime artefacts
+runs/
+dataset/
+dataset_roboflow/
+new_images/
+weights/
+*.pt
+*.zip
+__pycache__/
+.ipynb_checkpoints/
+
+# No dataset imagery in the repo — it belongs in the Release (see README §3)
+*.jpg
+*.jpeg
+*.png
+# ...except the committed evidence pack
+!results/**/*.jpg
+!results/**/*.png
