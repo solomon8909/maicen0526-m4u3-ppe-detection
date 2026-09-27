@@ -194,13 +194,11 @@ Dataset, unseen images and weights are Release assets, not repository files.
 
 | Member | Contribution |
 |---|---|
-| Rama Abu Ghoush | Dataset quality review against the label rules; annotation screenshots; label-error log feeding the error analysis |
-| Chloe C. | Unseen-image pack: sourcing, licence and attribution record, privacy screening |
-| Vijay Arun Dongre | Error analysis: false-positive and false-negative review, failure hypotheses, data-improvement plan |
-| Margarita Hondele | Slides and mini report; governance checklist review |
-| Solomon Yirga | Dataset version and frozen release, notebooks, training run, repository and README, reproducibility proof, submission |
-
-⟪FILL: adjust this table to what each person actually delivered before submitting — it should be accurate, not aspirational.⟫
+| Rama Abu Ghoush | Reviewed the class definitions; attempted the annotation review |
+| Chloe C. | Unseen-image pack: sourcing, licence and attribution record, privacy screening, checksum |
+| Vijay Arun Dongre | Error analysis: false-positive and false-negative diagnosis, class-level findings, data-improvement plan |
+| Margarita Hondele | Slides and mini report: review and sign-off |
+| Solomon Yirga | Dataset version and frozen release, notebooks, training run, repository and README, label review, slides and report, submission |
 
 ## 10. AI use declaration
 
