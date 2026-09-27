@@ -104,13 +104,19 @@ If Colab gives you no GPU, the notebook switches `full` to `verify` by itself an
 
 **One target met, one missed.** Overall mAP50 of 0.662 clears the 0.60 we set. Recall on `NO-Hardhat` is 0.510, well short of the 0.70 we said we needed. We are reporting that as a failure against our own criterion rather than adjusting the criterion after the fact.
 
-**The model is cautious, and it is cautious in the wrong direction for this use.** Precision exceeds recall on every one of the five classes — 0.806 against 0.584 overall. When it flags something it is usually right; `Hardhat` precision reaches 0.952 against just 5 false positives. But across the validation split it produced 216 false negatives against 128 false positives, so it misses far more than it invents. `Hardhat` alone accounts for 60 misses.
+**The model is cautious, and it is cautious in the wrong direction for this use.** Precision exceeds recall on every one of the five classes — 0.806 against 0.584 overall. When it flags something it is usually right; `Hardhat` precision reaches 0.952 against just 5 false positives. But across the validation split it produced 251 false negatives against 128 false positives, so it misses roughly twice as often as it invents. `Person` is the worst class on both counts (45 false positives, 83 misses) despite having the most training instances by far, which points at something other than a shortage of data.
 
 **The two classes that carry the safety signal are the weakest.** `NO-Hardhat` and `NO-Safety Vest` come last on every measure (mAP50 0.545 and 0.573, recall 0.510 and 0.499). This is exactly the failure mode the [risk note](docs/governance_checklist.md#4-risk-note--false-negatives-vs-false-positives) anticipated before we had any numbers: a missed violation is the error that matters, and this model's bias runs against its own purpose. Detecting an absence is harder than detecting an object, and the results show the cost of that.
 
 **The curves say the run stopped too early.** Validation mAP50 is still climbing at epoch 30, recall is still rising, and both validation losses are still falling — none of the three has flattened. The model was still learning when training ended, so it is undertrained rather than saturated, and the weak recall is at least partly a consequence of that. Extending to 60–100 epochs is the cheapest available improvement (the full run takes under 6 minutes on a T4), and it should be tried before concluding anything about the architecture. We report the 30-epoch result because that is what the brief specifies and what our documented configuration reproduces.
 
 **Two caveats on the per-class figures.** `Safety Vest` scores well (mAP50 0.717) on only 49 validation instances, a thin enough sample that the number should not be leaned on. And the most confident false positives are `NO-Hardhat` predictions at 0.85–0.95 — so where the model does invent violations, it does so with conviction.
+
+**Reading the failures changed the conclusion.** Going through the twelve worst cases image by image (see the [error analysis](docs/error_analysis.md)) turned up two things the metrics alone could not show.
+
+The first is that **the model keys on fluorescent colour rather than reflective banding**. It called a plain lime t-shirt a `Safety Vest` at 0.84, and missed a navy jacket with yellow-and-silver banding that our own class rules say qualifies. One false positive and one false negative, both the same underlying behaviour.
+
+The second is a dataset problem. Four of the six most confident false positives come from a single retail queue, where the model correctly spotted bare heads the annotator never labelled. More broadly, a substantial share of the images are not construction scenes at all — shopping crowds, indoor selfies, promotional and stock photography — labelled `NO-Hardhat` and `NO-Safety Vest` simply because the people in them wear ordinary clothes. The model has partly learned "bare head anywhere" rather than "bare head on a site", so our headline figure measures two domains at once. The [label review](docs/label_review.md) documents what the sample contained.
 
 **What follows for deployment.** As it stands this is a screening aid at a lowered confidence threshold, not a compliance check. Raising recall on the negative classes is the first priority, and the error analysis sets out which data would do it.
 
@@ -124,7 +130,7 @@ If Colab gives you no GPU, the notebook switches `full` to `verify` by itself an
 | [`results/evidence/new_image_predictions/`](results/evidence/new_image_predictions/) | 5 unseen images |
 | [`results/evidence/false_positives/`](results/evidence/false_positives/) · [`false_negatives/`](results/evidence/false_negatives/) | Worst errors, used in the error analysis |
 
-Error analysis: [`docs/error_analysis.md`](docs/error_analysis.md) · Governance: [`docs/governance_checklist.md`](docs/governance_checklist.md)
+Error analysis: [`docs/error_analysis.md`](docs/error_analysis.md) · Label review: [`docs/label_review.md`](docs/label_review.md) · Governance: [`docs/governance_checklist.md`](docs/governance_checklist.md)
 
 ## 6. Reproducibility checklist
 
@@ -166,6 +172,7 @@ The full record, including the metrics table, is in [`results/reproducibility_re
 │   ├── class_definitions.md
 │   ├── error_analysis.md
 │   ├── governance_checklist.md
+│   ├── label_review.md
 │   ├── new_images_sources.md
 │   └── pdf/                     slides + mini report
 └── results/
