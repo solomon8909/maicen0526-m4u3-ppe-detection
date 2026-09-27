@@ -28,7 +28,8 @@ This covers the model as built for this academic project and what would have to 
 - **Weak on small and occluded people.** Distant workers and people behind scaffolding or plant are the most frequently missed (see [`error_analysis.md`](error_analysis.md)).
 - **Two PPE items only.** It says nothing about harnesses, gloves, eye protection or boots — including fall protection, where the most serious construction injuries occur.
 - **Daylight, ground-level photos.** Night work, heavy dust, rain and drone or crane-camera angles are under-represented in training and should be treated as untested.
-- **Metrics are from one validation split** of about ⟪FILL: n⟫ images. They are an estimate, not a guarantee.
+- **Metrics are from one validation split** of 143 images. They are an estimate, not a guarantee.
+- **The training data is not purely construction imagery.** A meaningful share of it is crowd, indoor and stock photography (see [`label_review.md`](label_review.md)), so the model has partly learned to detect absent PPE in everyday settings rather than on sites. Until the dataset is filtered and the model re-evaluated, the reported figures should not be read as site performance.
 
 ## 4. Risk note — false negatives vs false positives
 
@@ -57,3 +58,4 @@ So the model is tuned to favour recall on the `NO-` classes: a low confidence th
 | Our trained `best.pt` | Derived from the above | Academic use | Released for reproduction of this project only; inherits the AGPL-3.0 position of the training library |
 
 The licence point in the last two rows matters most for any real trial. It is a cost and procurement decision, not a technical one, and belongs in the business case before any pilot rather than being discovered afterwards.
+
